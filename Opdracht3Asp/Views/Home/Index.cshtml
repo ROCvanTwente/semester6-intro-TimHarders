@@ -1,0 +1,41 @@
+﻿<form asp-action="Index" method="post">
+    <div class="form-group">
+        <label>Voer tekst in:</label>
+        <input asp-for="InputText" class="form-control" />
+    </div>
+
+    <div class="form-group mt-2">
+        <label>Selecteer hash algoritme:</label><br />
+        @foreach (var algo in new[] { "MD5", "SHA1", "SHA256", "SHA512", "BCrypt" })
+        {
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="SelectedAlgorithm" value="@algo" />
+                <label class="form-check-label">@algo</label>
+            </div>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#resultModal">
+        Hash!
+    </button>
+</form>
+
+@if (Model?.HashedResult != null)
+{
+    <div class="modal fade show" id="resultModal" style="display:block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gehashte waarde</h5>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Resultaat:</strong></p>
+                    <pre>@Model.HashedResult</pre>
+                </div>
+                <div class="modal-footer">
+                    <a href="/" class="btn btn-secondary">Sluiten</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
