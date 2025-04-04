@@ -1,0 +1,10 @@
+CREATE TABLE Personen (
+    Id INT IDENTITY PRIMARY KEY,
+    Voornaam NVARCHAR(50),
+    Achternaam NVARCHAR(50),
+    Straat NVARCHAR(100),
+    Huisnummer NVARCHAR(10),
+    Postcode NVARCHAR(10),
+    Woonplaats NVARCHAR(50),
+    Creditcardnummer VARBINARY(MAX) 
+);

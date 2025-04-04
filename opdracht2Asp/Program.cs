@@ -1,62 +1,93 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
 class Program
 {
-    // Vaste sleutel (32 bytes = 256 bits)
+    // AES sleutel en IV
     private static readonly byte[] Key = Encoding.UTF8.GetBytes("0123456789ABCDEF0123456789ABCDEF");
-
-    // Vaste IV (16 bytes = 128 bits)
     private static readonly byte[] IV = Encoding.UTF8.GetBytes("ABCDEF0123456789");
+
+    // Connection string aanpassen naar jouw server en database
+    private const string ConnectionString = "Server=localhost;Database=JouwDatabase;Trusted_Connection=True;";
 
     static void Main()
     {
-        Console.Write("Voer een creditcardnummer in: ");
-        string creditCardNumber = Console.ReadLine();
+        // Gegevens invoeren
+        var persoon = new Persoon
+        {
+            Voornaam = Vraag("Voornaam"),
+            Achternaam = Vraag("Achternaam"),
+            Straat = Vraag("Straat"),
+            Huisnummer = Vraag("Huisnummer"),
+            Postcode = Vraag("Postcode"),
+            Woonplaats = Vraag("Woonplaats"),
+            Creditcardnummer = Vraag("Creditcardnummer")
+        };
 
-        string encrypted = Encrypt(creditCardNumber);
-        Console.WriteLine($"Versleuteld: {encrypted}");
+        // Creditcardnummer versleutelen
+        byte[] encryptedCard = Encrypt(persoon.Creditcardnummer);
+        persoon.CreditcardVersleuteld = encryptedCard;
 
-        string decrypted = Decrypt(encrypted);
-        Console.WriteLine($"Ontsleuteld: {decrypted}");
+        // Opslaan in database
+        SaveToDatabase(persoon);
 
-        Console.WriteLine("Druk op een toets om af te sluiten...");
+        Console.WriteLine("Persoonsgegevens opgeslagen met versleuteld creditcardnummer.");
         Console.ReadKey();
     }
 
-    static string Encrypt(string plainText)
+    static string Vraag(string veld)
+    {
+        Console.Write($"{veld}: ");
+        return Console.ReadLine();
+    }
+
+    static byte[] Encrypt(string plainText)
     {
         using Aes aes = Aes.Create();
         aes.Key = Key;
         aes.IV = IV;
 
-        ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-
         using MemoryStream ms = new();
-        using CryptoStream cs = new(ms, encryptor, CryptoStreamMode.Write);
+        using CryptoStream cs = new(ms, aes.CreateEncryptor(), CryptoStreamMode.Write);
         using StreamWriter sw = new(cs);
         sw.Write(plainText);
         sw.Close();
 
-        return Convert.ToBase64String(ms.ToArray());
+        return ms.ToArray();
     }
 
-    static string Decrypt(string cipherText)
+    static void SaveToDatabase(Persoon p)
     {
-        byte[] buffer = Convert.FromBase64String(cipherText);
+        using SqlConnection conn = new(ConnectionString);
+        conn.Open();
 
-        using Aes aes = Aes.Create();
-        aes.Key = Key;
-        aes.IV = IV;
+        string sql = @"INSERT INTO Personen (Voornaam, Achternaam, Straat, Huisnummer, Postcode, Woonplaats, Creditcardnummer)
+                       VALUES (@Voornaam, @Achternaam, @Straat, @Huisnummer, @Postcode, @Woonplaats, @Creditcardnummer)";
 
-        ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+        using SqlCommand cmd = new(sql, conn);
+        cmd.Parameters.AddWithValue("@Voornaam", p.Voornaam);
+        cmd.Parameters.AddWithValue("@Achternaam", p.Achternaam);
+        cmd.Parameters.AddWithValue("@Straat", p.Straat);
+        cmd.Parameters.AddWithValue("@Huisnummer", p.Huisnummer);
+        cmd.Parameters.AddWithValue("@Postcode", p.Postcode);
+        cmd.Parameters.AddWithValue("@Woonplaats", p.Woonplaats);
+        cmd.Parameters.AddWithValue("@Creditcardnummer", p.CreditcardVersleuteld);
 
-        using MemoryStream ms = new(buffer);
-        using CryptoStream cs = new(ms, decryptor, CryptoStreamMode.Read);
-        using StreamReader sr = new(cs);
-
-        return sr.ReadToEnd();
+        cmd.ExecuteNonQuery();
     }
+}
+
+class Persoon
+{
+    public string Voornaam { get; set; }
+    public string Achternaam { get; set; }
+    public string Straat { get; set; }
+    public string Huisnummer { get; set; }
+    public string Postcode { get; set; }
+    public string Woonplaats { get; set; }
+    public string Creditcardnummer { get; set; }
+    public byte[] CreditcardVersleuteld { get; set; }
 }
